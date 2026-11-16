@@ -22,6 +22,28 @@ router.get('/fields', (_req, res) => {
   res.json({ fields: fields.map((f) => ({ ...f, quiz_count: map.get(f.id) || 0 })) });
 });
 
+/* -------- Teacher: create a custom subject / course -------- */
+router.post('/fields', requireRole('teacher', 'admin'), (req, res) => {
+  const b = req.body || {};
+  const name = String(b.name || '').trim();
+  if (!name || name.length < 2) return res.status(400).json({ error: 'Enter a subject name.' });
+  const category = String(b.category || 'Custom').trim() || 'Custom';
+  const icon = String(b.icon || '📚').trim().slice(0, 4) || '📚';
+  const blurb = String(b.blurb || '').trim().slice(0, 160);
+
+  // build a unique slug from the name
+  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'subject';
+  let slug = base;
+  let n = 2;
+  while (db.prepare('SELECT 1 FROM fields WHERE slug = ?').get(slug)) slug = `${base}-${n++}`;
+
+  const info = db
+    .prepare('INSERT INTO fields (slug, name, icon, blurb, category, created_by) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(slug, name, icon, blurb, category, req.user.id);
+  const field = db.prepare('SELECT * FROM fields WHERE id = ?').get(info.lastInsertRowid);
+  res.json({ field });
+});
+
 /* -------- Public: published practice quizzes in a field -------- */
 router.get('/fields/:slug/quizzes', (req, res) => {
   const field = db.prepare('SELECT * FROM fields WHERE slug = ?').get(req.params.slug);

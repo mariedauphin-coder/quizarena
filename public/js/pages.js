@@ -1,27 +1,32 @@
 /* ============================ Landing ============================ */
 function pageLanding() {
   const node = h(`<div class="container">
-    <section class="hero">
-      <span class="pill">Proctored online exams · built for universities</span>
-      <h1>Run real, <span class="grad">cheat-resistant</span> quizzes<br/>for computer science.</h1>
-      <p>Students practice by field, then sit live exams that lock the screen, watch for tab-switching,
-         and grade instantly. Teachers build quizzes, set the rules, and host the room.</p>
-      <div class="row" style="justify-content:center">
-        <a class="btn lg" href="#/join">🎓 Join a live quiz</a>
-        <a class="btn lg secondary" href="#/login">Teacher sign in</a>
+    <section class="herowrap">
+      <div class="herotext">
+        <span class="pill">Proctored online exams · for every course</span>
+        <h1>Run real, <span class="grad">cheat-resistant</span> quizzes<br/>for any subject.</h1>
+        <p>Students practice by subject, then sit live exams that lock the screen, watch for tab-switching,
+           and grade instantly. Teachers build quizzes — or generate them with AI — set the rules, and host the room.</p>
+        <div class="row wrap" style="margin-top:6px">
+          <a class="btn lg" href="#/join">🎓 Join a live quiz</a>
+          <a class="btn lg secondary" href="#/login">Teacher sign in</a>
+        </div>
       </div>
-      <p class="muted" style="margin-top:14px;font-size:13px">Demo teacher: <b>teacher@demo.edu</b> / <b>demo1234</b></p>
+      <div class="heroimg">
+        <img src="/img/students.jpg" alt="Students studying together" />
+        <img src="/img/library.jpg" alt="A school computer lab" class="heroimg-2" />
+      </div>
     </section>
 
     <section class="grid cols-3 feature-grid">
-      <div class="card feature"><div class="ic">🧭</div><h3>Field-based practice</h3>
-        <p class="muted">Ten CS domains — algorithms, AI/ML, computer vision, cybersecurity, DBMS, networking and more.</p></div>
+      <div class="card feature"><div class="ic">🧭</div><h3>Any subject</h3>
+        <p class="muted">From computer science to maths, physics, business, law, languages and more — or add your own.</p></div>
+      <div class="card feature"><div class="ic">✨</div><h3>AI question generator</h3>
+        <p class="muted">Teachers pick a subject and difficulty and let AI draft the questions, then review and add them.</p></div>
       <div class="card feature"><div class="ic">🔒</div><h3>Lockdown exam mode</h3>
         <p class="muted">Fullscreen enforced. Tab-switch, window-blur or screen-shrink is flagged instantly.</p></div>
       <div class="card feature"><div class="ic">⌨️</div><h3>Controlled input</h3>
         <p class="muted">MCQs accept only <span class="kbd">Enter</span> and arrow keys; written answers type normally.</p></div>
-      <div class="card feature"><div class="ic">🆔</div><h3>Join by student ID</h3>
-        <p class="muted">Students enter a numeric ID and wait in the lobby until the teacher starts.</p></div>
       <div class="card feature"><div class="ic">⚡</div><h3>Instant grading</h3>
         <p class="muted">MCQs auto-scored; written answers pre-scored and flagged for teacher review.</p></div>
       <div class="card feature"><div class="ic">🚩</div><h3>Auto-fail on cheating</h3>
@@ -123,32 +128,40 @@ async function pageDashboard() {
   if (!Store.user) return (location.hash = '#/login');
   const node = h(`<div class="container">
     <div class="row between wrap">
-      <div><h1>Choose a field</h1><p class="muted">Pick a computer-science domain to practice, or join a live exam.</p></div>
+      <div><h1>Choose a subject</h1><p class="muted">Pick a subject to practice, or join a live exam.</p></div>
       <a class="btn" href="#/join">Join a live quiz →</a>
     </div>
-    <div class="grid cols-auto mt2" id="fields"><p class="muted">Loading…</p></div>
+    <div id="cats" class="mt2"><p class="muted">Loading…</p></div>
   </div>`);
   mount(node);
   try {
     const { fields } = await API.get('/api/quizzes/fields');
-    const wrap = el('#fields', node);
-    wrap.innerHTML = '';
-    for (const f of fields) {
-      const c = h(`<div class="card field-card">
-        <div class="row between"><span class="icon">${esc(f.icon || '📚')}</span>
-          <span class="badge ${f.quiz_count ? 'g' : 'n'}">${f.quiz_count} quiz${f.quiz_count === 1 ? '' : 'zes'}</span></div>
-        <h3 class="mt">${esc(f.name)}</h3>
-        <p class="muted" style="font-size:13px">${esc(f.blurb || '')}</p>
-      </div>`);
-      c.onclick = () => (location.hash = `#/field/${f.slug}`);
-      wrap.appendChild(c);
+    const cats = el('#cats', node);
+    cats.innerHTML = '';
+    // group subjects by category
+    const groups = {};
+    for (const f of fields) (groups[f.category || 'General'] ||= []).push(f);
+    for (const [cat, list] of Object.entries(groups)) {
+      cats.appendChild(h(`<h3 class="cathead">${esc(cat)}</h3>`));
+      const wrap = h(`<div class="grid cols-auto"></div>`);
+      for (const f of list) {
+        const c = h(`<div class="card field-card">
+          <div class="row between"><span class="icon">${esc(f.icon || '📚')}</span>
+            <span class="badge ${f.quiz_count ? 'g' : 'n'}">${f.quiz_count} quiz${f.quiz_count === 1 ? '' : 'zes'}</span></div>
+          <h3 class="mt">${esc(f.name)}</h3>
+          <p class="muted" style="font-size:13px">${esc(f.blurb || '')}</p>
+        </div>`);
+        c.onclick = () => (location.hash = `#/field/${f.slug}`);
+        wrap.appendChild(c);
+      }
+      cats.appendChild(wrap);
     }
   } catch (err) { toast(err.message, 'err'); }
 }
 
 async function pageField(slug) {
   if (!Store.user) return (location.hash = '#/login');
-  const node = h(`<div class="container"><a href="#/dashboard" class="muted">← All fields</a>
+  const node = h(`<div class="container"><a href="#/dashboard" class="muted">← All subjects</a>
     <div id="body" class="mt"><p class="muted">Loading…</p></div></div>`);
   mount(node);
   try {
@@ -209,7 +222,7 @@ async function renderTeacherList(node) {
             <span class="badge ${q.mode === 'live' ? 'w' : 'n'}">${q.mode}</span>
             <span class="badge ${q.published ? 'g' : 'n'}">${q.published ? 'published' : 'draft'}</span>
           </div>
-          <p class="muted" style="font-size:13px;margin:6px 0 0">${esc(q.field_name || 'No field')} ·
+          <p class="muted" style="font-size:13px;margin:6px 0 0">${esc(q.field_name || 'No subject')} ·
             ${q.question_count} questions · ${q.duration_min} min ·
             ${q.fail_on_violation ? `auto-F after ${q.max_violations} violation(s)` : 'violations logged only'}</p>
         </div>
@@ -249,7 +262,8 @@ async function openQuizEditor(id) {
         <label>Title</label><input id="qtitle" value="${esc(q.title)}" />
         <label>Description</label><textarea id="qdesc" rows="2">${esc(q.description || '')}</textarea>
         <div class="grid cols-2">
-          <div><label>Field</label><select id="qfield">${fieldOpts}</select></div>
+          <div><label>Subject</label><select id="qfield">${fieldOpts}</select>
+            <a href="#" id="newSubject" style="font-size:13px;display:inline-block;margin-top:6px">+ Add a new subject</a></div>
           <div><label>Mode</label><select id="qmode">
             <option value="live" ${q.mode === 'live' ? 'selected' : ''}>Live (proctored exam)</option>
             <option value="practice" ${q.mode === 'practice' ? 'selected' : ''}>Practice (self-paced)</option>
@@ -279,6 +293,22 @@ async function openQuizEditor(id) {
     </div>
   </div>`);
   mount(node);
+
+  // Teachers can add their own subject / course on the spot.
+  el('#newSubject', node).onclick = async (e) => {
+    e.preventDefault();
+    const name = (prompt('Name of the new subject or course (e.g. "Organic Chemistry II"):') || '').trim();
+    if (!name) return;
+    try {
+      const { field } = await API.post('/api/quizzes/fields', { name, category: 'My subjects' });
+      fields.push(field);
+      window.__fields = fields;
+      const sel = el('#qfield', node);
+      sel.appendChild(h(`<option value="${field.id}">${esc(field.name)}</option>`));
+      sel.value = String(field.id);
+      toast('Subject added', 'ok');
+    } catch (err) { toast(err.message, 'err'); }
+  };
 
   el('#saveQuiz', node).onclick = async () => {
     const payload = {
@@ -329,9 +359,11 @@ function renderQuestions(node, quiz) {
   }
   col.appendChild(listWrap);
 
+  renderAiPanel(col, node, quiz);
+
   // add-question form
   const form = h(`<div class="mt2">
-    <h3>Add a question</h3>
+    <h3>Write a question yourself</h3>
     <label>Type</label>
     <select id="nqtype"><option value="mcq">Multiple choice (MCQ)</option><option value="detailed">Written / detailed answer</option></select>
     <label>Prompt</label><textarea id="nqprompt" rows="2"></textarea>
@@ -378,5 +410,95 @@ function renderQuestions(node, quiz) {
       renderQuestions(node, quiz);
       toast('Question added', 'ok');
     } catch (err) { toast(err.message, 'err'); }
+  };
+}
+
+/* ==================== AI question generator ==================== */
+async function renderAiPanel(col, node, quiz) {
+  const panel = h(`<div class="aibox mt2">
+    <h3 style="margin:0">✨ Generate questions with AI</h3>
+    <div id="aiBody"><p class="muted" style="font-size:13px">Checking…</p></div>
+  </div>`);
+  col.appendChild(panel);
+  const body = el('#aiBody', panel);
+
+  let status;
+  try { status = await API.get('/api/ai/status'); } catch (_e) { status = { enabled: false }; }
+  if (!status.enabled) {
+    body.innerHTML = `<p class="muted" style="font-size:13px;margin:8px 0 0">AI generation is not switched on for this site yet.
+      The administrator needs to add an AI API key on the server (see the README).</p>`;
+    return;
+  }
+
+  const fields = window.__fields || [];
+  const subj = (fields.find((f) => f.id === quiz.field_id) || {}).name || '';
+  body.innerHTML = `
+    <p class="muted" style="font-size:13px;margin:8px 0 0">Describe what you want. AI drafts the questions; you choose which ones to keep.
+      Always check AI-written questions and answers before using them in an exam.</p>
+    <label>Subject</label><input id="aiSubject" value="${esc(subj)}" />
+    <label>Topic or chapter (optional)</label><input id="aiTopic" placeholder="e.g. Newton's laws of motion" />
+    <div class="grid cols-3">
+      <div><label>How many</label><input id="aiCount" type="number" min="1" max="10" value="5" /></div>
+      <div><label>Type</label><select id="aiType">
+        <option value="mcq">Multiple choice</option><option value="detailed">Written</option><option value="mixed">Mixed</option></select></div>
+      <div><label>Difficulty</label><select id="aiDiff">
+        <option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select></div>
+    </div>
+    <button class="btn block mt" id="aiGo">Generate</button>
+    <div id="aiOut" class="mt"></div>`;
+
+  const out = el('#aiOut', body);
+  const go = el('#aiGo', body);
+  go.onclick = async () => {
+    const subject = el('#aiSubject', body).value.trim();
+    if (!subject) return toast('Enter a subject.', 'err');
+    go.disabled = true; go.textContent = 'Generating…';
+    out.innerHTML = '';
+    try {
+      const { questions } = await API.post('/api/ai/generate', {
+        subject,
+        topic: el('#aiTopic', body).value.trim(),
+        count: Number(el('#aiCount', body).value),
+        type: el('#aiType', body).value,
+        difficulty: el('#aiDiff', body).value,
+      });
+      showAiResults(out, node, quiz, questions);
+    } catch (err) { toast(err.message, 'err'); }
+    go.disabled = false; go.textContent = 'Generate';
+  };
+}
+
+function showAiResults(out, node, quiz, questions) {
+  out.innerHTML = '';
+  questions.forEach((q, i) => {
+    let detail = '';
+    if (q.type === 'mcq') {
+      detail = '<ul class="aiopts">' + q.options.map((o, j) =>
+        `<li class="${j === q.correct ? 'ok' : ''}">${String.fromCharCode(65 + j)}. ${esc(o)}${j === q.correct ? ' ✓ correct' : ''}</li>`).join('') + '</ul>';
+    } else {
+      detail = `<p class="muted" style="font-size:13px;margin:6px 0 0">Grading keywords: ${esc((q.keywords || []).join(', ') || 'none')}</p>`;
+    }
+    out.appendChild(h(`<label class="aiq">
+      <input type="checkbox" data-i="${i}" checked style="width:auto;margin-top:4px" />
+      <div><span class="tag">${q.type === 'mcq' ? 'MCQ' : 'Written'} · ${q.points} pt</span>
+        <p style="margin:4px 0 0">${esc(q.prompt)}</p>${detail}</div></label>`));
+  });
+  const add = h(`<button class="btn good block mt">Add selected questions to the quiz</button>`);
+  out.appendChild(add);
+  add.onclick = async () => {
+    const picked = els('input[type=checkbox]', out).filter((c) => c.checked).map((c) => questions[Number(c.dataset.i)]);
+    if (!picked.length) return toast('Select at least one question.', 'err');
+    add.disabled = true;
+    let added = 0;
+    for (const q of picked) {
+      try {
+        const { question } = await API.post(`/api/quizzes/${quiz.id}/questions`, q);
+        question.options = question.options ? JSON.parse(question.options) : null;
+        quiz.questions.push(question);
+        added++;
+      } catch (err) { toast(err.message, 'err'); }
+    }
+    toast(`${added} question${added === 1 ? '' : 's'} added`, 'ok');
+    renderQuestions(node, quiz);
   };
 }

@@ -1,3 +1,4 @@
+# One-click deploy to Render (https://render.com): New + -> Blueprint -> pick this repo.
 services:
   - type: web
     name: quizarena
@@ -13,3 +14,5 @@ services:
         value: 20.18.1
       - key: JWT_SECRET
         generateValue: true
+      # To switch on the AI question generator, add AI_API_KEY in the Render
+      # dashboard (Environment tab). Never commit the key to GitHub.

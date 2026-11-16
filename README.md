@@ -1,8 +1,8 @@
 # QuizArena — Proctored Online Quiz System
 
-A deployable web platform for computer-science education with two modes:
+A deployable web platform for any course or subject, with two modes:
 
-- **Practice** — students browse 10 CS fields and take self-paced quizzes with instant scoring.
+- **Practice** — students browse subjects (computer science, maths, sciences, business, humanities, languages, or ones the teacher adds) and take self-paced quizzes with instant scoring.
 - **Live proctored exam** — students join a room with their **numeric student ID**, wait in a lobby, and sit a **locked-down** exam. Leaving fullscreen, switching tabs, or shrinking the window is detected instantly, flags the student, ends the exam, and records an automatic **F**.
 
 Built with Node.js + Express + Socket.IO + SQLite. No build step, no external database to provision — it runs anywhere Node runs and deploys in minutes.
@@ -57,6 +57,17 @@ Right-click and other keyboard shortcut combos (Ctrl/Cmd/Alt, F5/F11/F12) are sw
 - Instant grading: MCQs auto-scored; written answers get a provisional keyword score and are **flagged for teacher review** (teacher can override any score).
 
 ---
+
+## AI question generator
+
+Teachers can have AI draft questions instead of writing them: in the quiz editor, open **Generate questions with AI**, give a subject, topic, number, type and difficulty, then tick the questions to keep. Nothing is saved until the teacher adds it, and AI-written questions and answers should always be checked before an exam.
+
+The feature is off until the server has an API key:
+
+- `AI_API_KEY` — an Anthropic API key (create one at console.anthropic.com; usage is billed to that account).
+- `AI_MODEL` — optional, defaults to `claude-haiku-4-5-20251001`.
+
+On Render: service -> **Environment** -> add `AI_API_KEY` -> save (it redeploys). Locally: put it in a `.env` file. Never commit the key to GitHub.
 
 ## Run locally
 
@@ -152,7 +163,8 @@ db.js                SQLite schema + CS fields + demo seed
 grading.js           MCQ auto-grading, written-answer scoring, letter grades
 middleware/auth.js   JWT cookie auth + role guards
 routes/auth.js       register / login / logout / me
-routes/quizzes.js    fields, quiz CRUD, questions, live sessions, results, practice
+routes/ai.js         AI question generation (optional, needs AI_API_KEY)
+routes/quizzes.js    subjects, quiz CRUD, questions, live sessions, results, practice
 realtime/live.js     Socket.IO: lobby, start, answer autosave, violation→F, submit
 public/              Frontend (vanilla JS SPA)
   index.html

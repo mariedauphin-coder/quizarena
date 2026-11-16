@@ -36,11 +36,13 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS fields (
-  id    INTEGER PRIMARY KEY AUTOINCREMENT,
-  slug  TEXT UNIQUE NOT NULL,
-  name  TEXT NOT NULL,
-  icon  TEXT,
-  blurb TEXT
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  slug       TEXT UNIQUE NOT NULL,
+  name       TEXT NOT NULL,
+  icon       TEXT,
+  blurb      TEXT,
+  category   TEXT DEFAULT 'General',
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL  -- null = built-in subject
 );
 
 CREATE TABLE IF NOT EXISTS quizzes (
@@ -115,25 +117,56 @@ CREATE INDEX IF NOT EXISTS idx_attempts_session ON attempts(session_id);
 CREATE INDEX IF NOT EXISTS idx_answers_attempt ON answers(attempt_id);
 `);
 
+/* Lightweight migrations for databases created before these columns existed. */
+function addColumnIfMissing(table, column, decl) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (!cols.some((c) => c.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${decl}`);
+  }
+}
+addColumnIfMissing('fields', 'category', "TEXT DEFAULT 'General'");
+addColumnIfMissing('fields', 'created_by', 'INTEGER');
+
 /* ------------------------------------------------------------------ */
 /* Seed data: CS fields + a demo teacher + a sample quiz               */
 /* ------------------------------------------------------------------ */
 
+// [slug, name, icon, blurb, category] — any discipline, not just computer science.
 const FIELDS = [
-  ['algorithms', 'Algorithms & Data Structures', '🧩', 'Sorting, graphs, complexity, recursion.'],
-  ['ai-ml', 'Artificial Intelligence & ML', '🤖', 'Learning, neural nets, model training.'],
-  ['computer-vision', 'Computer Vision', '👁️', 'Image processing, detection, segmentation.'],
-  ['cybersecurity', 'Cybersecurity', '🔐', 'Cryptography, attacks, defense, network security.'],
-  ['databases', 'Databases (DBMS)', '🗄️', 'SQL, normalization, transactions, indexing.'],
-  ['networking', 'Computer Networking', '🌐', 'TCP/IP, routing, HTTP, the OSI model.'],
-  ['web', 'Web Application Development', '🕸️', 'HTTP, REST, front-end, back-end, sessions.'],
-  ['os', 'Operating Systems', '⚙️', 'Processes, scheduling, memory, concurrency.'],
-  ['robotics', 'Robotics', '🦾', 'Control, kinematics, sensors, actuation.'],
-  ['prog-languages', 'Programming Languages', '💻', 'Paradigms, compilers, type systems.'],
+  // Computer Science
+  ['algorithms', 'Algorithms & Data Structures', '🧩', 'Sorting, graphs, complexity, recursion.', 'Computer Science'],
+  ['ai-ml', 'Artificial Intelligence & ML', '🤖', 'Learning, neural nets, model training.', 'Computer Science'],
+  ['cybersecurity', 'Cybersecurity', '🔐', 'Cryptography, attacks, defense, network security.', 'Computer Science'],
+  ['databases', 'Databases (DBMS)', '🗄️', 'SQL, normalization, transactions, indexing.', 'Computer Science'],
+  ['networking', 'Computer Networking', '🌐', 'TCP/IP, routing, HTTP, the OSI model.', 'Computer Science'],
+  ['web', 'Web Application Development', '🕸️', 'HTTP, REST, front-end, back-end, sessions.', 'Computer Science'],
+  // Mathematics
+  ['calculus', 'Calculus', '∫', 'Limits, derivatives, integrals, series.', 'Mathematics'],
+  ['linear-algebra', 'Linear Algebra', '➗', 'Vectors, matrices, eigenvalues, transforms.', 'Mathematics'],
+  ['statistics', 'Statistics & Probability', '📊', 'Distributions, inference, hypothesis testing.', 'Mathematics'],
+  // Natural Sciences
+  ['physics', 'Physics', '🔭', 'Mechanics, electricity, waves, thermodynamics.', 'Natural Sciences'],
+  ['chemistry', 'Chemistry', '⚗️', 'Atoms, bonding, reactions, organic chemistry.', 'Natural Sciences'],
+  ['biology', 'Biology', '🧬', 'Cells, genetics, ecology, physiology.', 'Natural Sciences'],
+  // Engineering
+  ['robotics', 'Robotics', '🦾', 'Control, kinematics, sensors, actuation.', 'Engineering'],
+  ['electronics', 'Electronics', '🔌', 'Circuits, signals, microcontrollers.', 'Engineering'],
+  // Business & Economics
+  ['economics', 'Economics', '📈', 'Micro, macro, markets, policy.', 'Business & Economics'],
+  ['accounting', 'Accounting & Finance', '💰', 'Statements, ratios, budgeting, valuation.', 'Business & Economics'],
+  ['management', 'Management & Marketing', '📋', 'Strategy, operations, marketing, HR.', 'Business & Economics'],
+  // Humanities & Social Sciences
+  ['history', 'History', '🏛️', 'Eras, events, causes and consequences.', 'Humanities'],
+  ['geography', 'Geography', '🗺️', 'Physical, human and economic geography.', 'Humanities'],
+  ['psychology', 'Psychology', '🧠', 'Cognition, behavior, development, disorders.', 'Social Sciences'],
+  ['law', 'Law', '⚖️', 'Principles, rights, contracts, procedure.', 'Social Sciences'],
+  // Languages
+  ['english', 'English', '📖', 'Grammar, comprehension, writing, literature.', 'Languages'],
+  ['general-knowledge', 'General Knowledge', '💡', 'Mixed topics for any course or quiz.', 'General'],
 ];
 
 const insertField = db.prepare(
-  `INSERT OR IGNORE INTO fields (slug, name, icon, blurb) VALUES (?, ?, ?, ?)`
+  `INSERT OR IGNORE INTO fields (slug, name, icon, blurb, category) VALUES (?, ?, ?, ?, ?)`
 );
 const seedFields = db.transaction(() => {
   for (const f of FIELDS) insertField.run(...f);

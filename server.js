@@ -11,6 +11,7 @@ const { Server } = require('socket.io');
 const { attachUser } = require('./middleware/auth');
 const authRoutes = require('./routes/auth');
 const quizRoutes = require('./routes/quizzes');
+const aiRoutes = require('./routes/ai');
 const attachLive = require('./realtime/live');
 
 const app = express();
@@ -44,6 +45,7 @@ app.use(attachUser);
 app.get('/api/health', (_req, res) => res.json({ ok: true, ts: Date.now() }));
 app.use('/api/auth', authRoutes);
 app.use('/api/quizzes', quizRoutes);
+app.use('/api/ai', aiRoutes);
 
 // static frontend
 app.use(express.static(path.join(__dirname, 'public')));

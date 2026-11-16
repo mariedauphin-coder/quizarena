@@ -1,6 +1,7 @@
 /* In-process end-to-end test: requires the server, then drives it. */
 process.env.PORT = '3599';
 process.env.DATA_DIR = '/tmp/qa-test-data';
+delete process.env.AI_API_KEY; delete process.env.ANTHROPIC_API_KEY;
 require('fs').rmSync('/tmp/qa-test-data', { recursive: true, force: true });
 
 const { io } = require('socket.io-client');
@@ -133,6 +134,20 @@ function check(name, cond) { console.log((cond ? '  ✓ ' : '  ✗ ') + name); c
   const sub = await api('POST', '/api/quizzes/1/submit', { responses: resp }, scookie);
   check('practice submit returns a grade', !!(sub.body.result && sub.body.result.grade));
   check('written answer flags attempt for review', sub.body.result.needsReview === true);
+
+  /* ---- any-subject + AI endpoints ---- */
+  const fl = await api('GET', '/api/quizzes/fields');
+  check('subjects span beyond computer science', fl.body.fields.some((f) => f.category === 'Natural Sciences') && fl.body.fields.length >= 20);
+  const nf = await api('POST', '/api/quizzes/fields', { name: 'Organic Chemistry II' }, cookie);
+  check('teacher can add a custom subject', nf.status === 200 && nf.body.field.slug === 'organic-chemistry-ii');
+  const nfS = await api('POST', '/api/quizzes/fields', { name: 'Hack' }, scookie);
+  check('students cannot add subjects', nfS.status === 403);
+  const ais = await api('GET', '/api/ai/status', null, cookie);
+  check('AI status reports disabled without a key', ais.status === 200 && ais.body.enabled === false);
+  const aig = await api('POST', '/api/ai/generate', { subject: 'Physics' }, cookie);
+  check('AI generate refuses cleanly without a key', aig.status === 503);
+  const aigS = await api('POST', '/api/ai/generate', { subject: 'Physics' }, scookie);
+  check('students cannot use the AI generator', aigS.status === 403);
 
   host.close(); stu.close();
   console.log(`\n  ${pass} passed, ${fail} failed`);
