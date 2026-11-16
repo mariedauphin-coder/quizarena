@@ -1,21 +1,15 @@
-# One-click deploy to Render (https://render.com).
-# In Render: New +  →  Blueprint  →  point it at your repo. This file does the rest.
 services:
   - type: web
     name: quizarena
     runtime: node
-    plan: starter            # "free" also works for testing; starter keeps it always-on
-    buildCommand: npm install --omit=dev
+    plan: free
+    buildCommand: npm install
     startCommand: node server.js
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: 20.18.1
       - key: JWT_SECRET
-        generateValue: true  # Render generates a strong secret automatically
-      - key: DATA_DIR
-        value: /var/data
-    disk:
-      name: quizarena-data   # persistent disk so the database survives deploys
-      mountPath: /var/data
-      sizeGB: 1
+        generateValue: true
