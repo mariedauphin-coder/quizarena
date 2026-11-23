@@ -79,7 +79,7 @@ npm start
 
 Demo teacher account is seeded automatically:
 
-- **teacher@demo.edu** / **demo1234** — owns a sample live quiz ("Web & Networking Fundamentals").
+- **teacher@demo.edu** / ********* — owns a sample live quiz ("Web & Networking Fundamentals").
 - A demo student ID **2417260** / **demo1234** also exists, though students can join live exams by ID without an account.
 
 Run the automated end-to-end test suite:
